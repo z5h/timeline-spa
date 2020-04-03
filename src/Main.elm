@@ -6,18 +6,20 @@ import Generated.Pages as Pages
 import Generated.Route as Route exposing (Route)
 import Global
 import Html
+import Time
+import Timeline exposing (Timeline)
 import Url exposing (Url)
 
 
-main : Program Flags Model Msg
+main : Program Flags (Timeline Model) (Timeline.Msg Msg)
 main =
     Browser.application
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        , onUrlRequest = LinkClicked
-        , onUrlChange = UrlChanged
+        { init = \flags url key -> init flags url key |> Timeline.init 3000 (Time.millisToPosix 0)
+        , view = Timeline.viewDocument view
+        , update = Timeline.update update
+        , subscriptions = Timeline.subscriptions subscriptions
+        , onUrlRequest = Timeline.msg << LinkClicked
+        , onUrlChange = Timeline.msg << UrlChanged
         }
 
 
@@ -117,9 +119,12 @@ subscriptions model =
         ]
 
 
-view : Model -> Browser.Document Msg
-view model =
+view : Timeline Model -> Browser.Document Msg
+view timeline =
     let
+        model =
+            Timeline.value timeline
+
         documentMap :
             (msg1 -> msg2)
             -> Document msg1
