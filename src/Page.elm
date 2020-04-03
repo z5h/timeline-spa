@@ -16,6 +16,7 @@ module Page exposing
 
 import Browser
 import Global
+import Html
 import Spa
 import Time
 import Timeline exposing (Timeline)
@@ -26,7 +27,11 @@ type alias Document msg =
 
 
 type alias Page flags model msg =
-    Spa.Page flags (Timeline model) msg Global.Model Global.Msg
+    { init : Global.Model -> flags -> ( Timeline model, Cmd msg, Cmd Global.Msg )
+    , update : Global.Model -> msg -> Timeline model -> ( Timeline model, Cmd msg, Cmd Global.Msg )
+    , view : Global.Model -> Timeline model -> Document msg
+    , subscriptions : Global.Model -> Timeline model -> Sub msg
+    }
 
 
 type alias Bundle msg =
@@ -40,16 +45,49 @@ upgrade :
     ->
         { init : pageFlags -> Global.Model -> ( model, Cmd msg, Cmd Global.Msg )
         , update : pageMsg -> pageModel -> Global.Model -> ( model, Cmd msg, Cmd Global.Msg )
-        , bundle : pageModel -> Global.Model -> Bundle msg
+        , bundle : Timeline pageModel -> Global.Model -> Bundle msg
         }
-upgrade =
-    Debug.todo "Spa.upgrade"
+upgrade toModel toMsg page =
+    { init =
+        \flags global ->
+            let
+                ( model, cmd, globalCmd ) =
+                    page.init global flags
+            in
+            ( toModel (Timeline.value model)
+            , Cmd.map toMsg cmd
+            , globalCmd
+            )
+    , update =
+        \msg model global ->
+            let
+                ( model_, cmd, globalCmd ) =
+                    page.update global msg (toTimeline model)
+            in
+            ( toModel (Timeline.value model_)
+            , Cmd.map toMsg cmd
+            , globalCmd
+            )
+    , bundle =
+        \model global ->
+            { view =
+                let
+                    doc =
+                        page.view global model
+                in
+                { title = doc.title
+                , body = List.map (Html.map toMsg) doc.body
+                }
+            , subscriptions =
+                Sub.map toMsg (page.subscriptions global model)
+            }
+    }
 
 
 static : { view : Document msg } -> Page flags () msg
 static page =
     { init = \_ _ -> ( toTimeline (), Cmd.none, Cmd.none )
-    , update = \_ msg modelTimeline -> ( modelTimeline, Cmd.none, Cmd.none )
+    , update = \_ _ modelTimeline -> ( modelTimeline, Cmd.none, Cmd.none )
     , view = \_ _ -> page.view
     , subscriptions = \_ _ -> Sub.none
     }
@@ -59,15 +97,6 @@ toTimeline : model -> Timeline model
 toTimeline model =
     Timeline.init 0 (Time.millisToPosix 0) ( model, Cmd.none )
         |> Tuple.first
-
-
-
---type alias Page flags model msg globalModel globalMsg =
---    { init : globalModel -> flags -> ( (Timeline model), Cmd msg, Cmd globalMsg )
---    , update : globalModel -> msg -> (Timeline model) -> ( (Timeline model), Cmd msg, Cmd globalMsg )
---    , view : globalModel -> (Timeline model) -> Document msg
---    , subscriptions : globalModel -> (Timeline model) -> Sub msg
---    }
 
 
 sandbox :

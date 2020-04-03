@@ -2,10 +2,10 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav exposing (Key)
-import Generated.Pages as Pages
 import Generated.Route as Route exposing (Route)
 import Global
 import Html
+import Pages
 import Time
 import Timeline exposing (Timeline)
 import Url exposing (Url)
@@ -109,12 +109,16 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        timelineModel page =
+            Timeline.init 0 (Time.millisToPosix 0) ( page, Cmd.none ) |> Tuple.first
+    in
     Sub.batch
         [ model.global
             |> Global.subscriptions
             |> Sub.map Global
         , model.page
-            |> (\page -> Pages.subscriptions page model.global)
+            |> (\page -> Pages.subscriptions (timelineModel page) model.global)
             |> Sub.map Page
         ]
 
@@ -146,7 +150,7 @@ view timeline =
             }
     in
     Global.view
-        { page = Pages.view model.page model.global |> documentMap Page
+        { page = Pages.view pageModelTimeline model.global |> documentMap Page
         , global = model.global
         , toMsg = Global
         }

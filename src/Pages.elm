@@ -1,4 +1,4 @@
-module Generated.Pages exposing
+module Pages exposing
     ( Model
     , Msg
     , init
@@ -10,9 +10,10 @@ module Generated.Pages exposing
 import Generated.Route as Route exposing (Route)
 import Global
 import Page exposing (Bundle, Document)
-import Pages.Top
 import Pages.Docs
 import Pages.NotFound
+import Pages.Top
+import Timeline exposing (Timeline)
 
 
 
@@ -38,7 +39,7 @@ type Msg
 type alias UpgradedPage flags model msg =
     { init : flags -> Global.Model -> ( Model, Cmd Msg, Cmd Global.Msg )
     , update : msg -> model -> Global.Model -> ( Model, Cmd Msg, Cmd Global.Msg )
-    , bundle : model -> Global.Model -> Bundle Msg
+    , bundle : Timeline model -> Global.Model -> Bundle Msg
     }
 
 
@@ -66,10 +67,10 @@ init route =
     case route of
         Route.Top ->
             pages.top.init ()
-        
+
         Route.Docs ->
             pages.docs.init ()
-        
+
         Route.NotFound ->
             pages.notFound.init ()
 
@@ -83,13 +84,13 @@ update bigMsg bigModel =
     case ( bigMsg, bigModel ) of
         ( Top_Msg msg, Top_Model model ) ->
             pages.top.update msg model
-        
+
         ( Docs_Msg msg, Docs_Model model ) ->
             pages.docs.update msg model
-        
+
         ( NotFound_Msg msg, NotFound_Model model ) ->
             pages.notFound.update msg model
-        
+
         _ ->
             always ( bigModel, Cmd.none, Cmd.none )
 
@@ -98,24 +99,72 @@ update bigMsg bigModel =
 -- BUNDLE - (view + subscriptions)
 
 
-bundle : Model -> Global.Model -> Bundle Msg
-bundle bigModel =
-    case bigModel of
+bundle : Timeline Model -> Global.Model -> Bundle Msg
+bundle timelineModel =
+    case Timeline.value timelineModel of
         Top_Model model ->
-            pages.top.bundle model
-        
+            toTimelineBundle timelineModel bundleModelTop pages.top.bundle model
+
         Docs_Model model ->
-            pages.docs.bundle model
-        
+            toTimelineBundle timelineModel bundleModelDocs pages.docs.bundle model
+
         NotFound_Model model ->
-            pages.notFound.bundle model
+            toTimelineBundle timelineModel bundleModelNotFound pages.notFound.bundle model
 
 
-view : Model -> Global.Model -> Document Msg
+toTimelineBundle :
+    Timeline Model
+    -> (Model -> Maybe pageModel)
+    -> (Timeline pageModel -> Global.Model -> Bundle Msg)
+    -> pageModel
+    -> Global.Model
+    -> Bundle Msg
+toTimelineBundle timeline toMaybe pageBundle pageModel global =
+    let
+        continuousPageTimeline : Timeline pageModel
+        continuousPageTimeline =
+            timeline
+                |> Timeline.map toMaybe
+                |> Timeline.withDefault pageModel
+    in
+    pageBundle continuousPageTimeline global
+
+
+bundleModelTop : Model -> Maybe Pages.Top.Model
+bundleModelTop model =
+    case model of
+        Top_Model model_ ->
+            Just model_
+
+        _ ->
+            Nothing
+
+
+bundleModelDocs : Model -> Maybe Pages.Docs.Model
+bundleModelDocs model =
+    case model of
+        Docs_Model model_ ->
+            Just model_
+
+        _ ->
+            Nothing
+
+
+bundleModelNotFound : Model -> Maybe Pages.NotFound.Model
+bundleModelNotFound model =
+    case model of
+        NotFound_Model model_ ->
+            Just model_
+
+        _ ->
+            Nothing
+
+
+view : Timeline Model -> Global.Model -> Document Msg
 view model =
     bundle model >> .view
 
 
-subscriptions : Model -> Global.Model -> Sub Msg
+subscriptions : Timeline Model -> Global.Model -> Sub Msg
 subscriptions model =
     bundle model >> .subscriptions
