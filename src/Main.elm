@@ -119,11 +119,22 @@ subscriptions model =
         ]
 
 
+
+-- any view function, WITH some model(s) as input
+-- should now have (Timeline model) as input
+
+
 view : Timeline Model -> Browser.Document Msg
 view timeline =
     let
         model =
             Timeline.value timeline
+
+        pageModelTimeline =
+            timeline |> Timeline.map .page
+
+        globalModelTimeline =
+            timeline |> Timeline.map .global
 
         documentMap :
             (msg1 -> msg2)
