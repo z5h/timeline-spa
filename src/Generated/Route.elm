@@ -36,10 +36,10 @@ toHref route =
             case route of
                 Top ->
                     []
-
+                
                 Docs ->
                     [ "docs" ]
-
+                
                 NotFound ->
                     [ "not-found" ]
     in

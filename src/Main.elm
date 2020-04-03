@@ -14,7 +14,7 @@ import Url exposing (Url)
 main : Program Flags (Timeline Model) (Timeline.Msg Msg)
 main =
     Browser.application
-        { init = \flags url key -> init flags url key |> Timeline.init 3000 (Time.millisToPosix 0)
+        { init = \flags url key -> init flags url key |> Timeline.init 5000 (Time.millisToPosix 0)
         , view = Timeline.viewDocument view
         , update = Timeline.update update
         , subscriptions = Timeline.subscriptions subscriptions
